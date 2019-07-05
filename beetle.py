@@ -1,4 +1,4 @@
-### 1st Checkpoint #####
+ ### combined- normal + defect contour ###
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,9 +6,13 @@ import math
 img = cv2.imread('./defected/leaf22_modified.jpg')
 rows = img.shape[0]
 cols = img.shape[1]
-# rows = int((rows*15)/100)
-# cols = int((cols*15)/100)
+# rows = int((rows*40)/100)
+# cols = int((cols*40)/100)
 # img = cv2.resize(img, (cols,rows)) 
+
+img_out1 = img.copy()
+img_out2 =img.copy()
+
 
 g = img[:,:,1]
 kernel = np.ones((2,2),np.uint8)
@@ -47,30 +51,88 @@ for i11 in range(rows):
             whitecoordi2 = (j11,i11)
             col_white.append(whitecoordi2)
 
-# print('ROW\n',row_white)
-# print('COL\n',col_white)
+
 white_coordi = row_white + col_white + result_cord
-# corners = np.int0(white_coordi)
-# for corner in corners:
-#     x,y = corner.ravel()
-#     cv2.circle(img,(x,y),3,255,-1)
-    
-# print('COL\n',white_coordi)
+white_coordi = np.array(white_coordi)
+
 def last(n):  
     return n[m]   
-   
-# function to sort the tuple    
 def sort(tuples): 
     return sorted(tuples, key = last) 
-
 m = 0
+
+### Convex hull - outer contour ###
+
+hull = cv2.convexHull(white_coordi)
+hull_coord1 = []
+hull_coord2 = []
+for i4 in range(len(hull)):
+    hull_coord = hull[i4]
+    x4, y4 = hull_coord[0]
+    hull_coord1 = (x4, y4)
+    hull_coord2.append(hull_coord1)
+hull_new =  row_white + col_white + hull_coord2 
+hull_new = np.array(hull_new)
+hull_sorted_pts = sort(hull_new)
+hull_update_pts = hull_sorted_pts
+def euclidean1(coords):
+    x0, y0 = hull_update_pts[0]
+    x, y = coords
+    return ((x-x0)**2 + (y-y0)**2)**0.5
+hull_first_ele = []
+for i2 in range(len(hull_update_pts)-1):
+    candidates = hull_update_pts[1:]
+#     print('SORTED\n',candidates)
+    candidates.sort(key=euclidean1)
+    hull_update_pts = candidates  
+    hull_first_ele.append(candidates[0])
+
+hull_first_ele = np.array(hull_first_ele[1:])
+
+def euclidean2(coords):
+    x60, y60 = hull_first_ele[-1]
+    x6, y6 = coords
+    return ((x6-x60)**2 + (y6-y60)**2)**0.5
+connect = sort(hull_first_ele[:100])
+for i66 in range(len(connect)):
+    connect.sort(key = euclidean2)
+f0,f1 = connect[0] 
+f2,f3 = hull_first_ele[-1]
+# for i55 in range(len(hull_first_ele)-1):
+#     x50,y50 = hull_first_ele[i55]
+#     x51,y51 = hull_first_ele[i55+1]
+#     lineThickness = 2
+#     cv2.line(img, (x50,y50), (x51,y51), (0,0,255), lineThickness)
+#     cv2.line(img, (f0,f1), (f2,f3), (0,0,255), lineThickness)
+hull_first_ele2 =[]
+hull_first_ele3 =[]
+for i70 in range(len(hull_first_ele)):
+    f2,f3 = hull_first_ele[i70]
+    if (f2,f3)!=(f0,f1):
+        hull_first_ele2 = (f2,f3)
+        hull_first_ele3.append(hull_first_ele2)
+    
+hull_first_ele3 = [(f0,f1)]+hull_first_ele3
+hull_first_ele3 = np.array(hull_first_ele3)
+cv2.drawContours(img_out1, [hull_first_ele3],  -1, (0, 0, 255), 2, cv2.LINE_AA)
+
+mask_normal = np.zeros((rows,cols), np.uint8)
+cv2.drawContours(mask_normal, [hull_first_ele3], 0, (255, 255, 255), -1, cv2.LINE_AA)
+# mask1 = cv2.bitwise_and(img, img, mask=mask)
+
+
+#### CONVEX HULL ENDS ###
+
+
+######### Area contour begins#######
+
 sorted_pts = sort(white_coordi)
 
 update_pts = sorted_pts
 def euclidean(coords):
-    x0, y0 = update_pts[0]
-    x, y = coords
-    return ((x-x0)**2 + (y-y0)**2)**0.5
+    x01, y01 = update_pts[0]
+    x011, y011 = coords
+    return ((x011-x01)**2 + (y011-y01)**2)**0.5
 first_ele = []
 for i2 in range(len(update_pts)-1):
     candidates = update_pts[1:]
@@ -79,72 +141,121 @@ for i2 in range(len(update_pts)-1):
 #     print('SORTED\n',candidates)
     first_ele.append(candidates[0])
 
-first_ele.insert(0,sorted_pts[0])
+# first_ele.insert(0,sorted_pts[0])
 # print('\n NEW\n',first_ele)
 
-print('\nsorted\n',len(first_ele)) 
-img111 = img.copy()
-img222 = img.copy()
+# print('\nsorted\n',first_ele) 
+values = []
+central_coordi = []
+#### Angle ####
+for i5 in range(len(first_ele)-2):
+    x5,y5 = first_ele[i5]
+    x15,y15 = first_ele[i5+1]
+    x25,y25 = first_ele[i5+2]
+    angle2 = np.arctan((y25 - y15)/(x25 - x15 +0.00005)) - np.arctan((y15-y5)/(x15-x5 +0.00005))
+    angle2 = np.degrees(angle2)
+    if angle2 < 0:
+        angle2 = angle2 + 180.0
+    values.append(angle2)
+    central_coordi.append(first_ele[i5+1])
+#     print('Angle',angle2)
+#     print('Coordinate',first_ele[i5+1])
+  
+img1 = img.copy()
+img2 = img.copy()
+MM=[]
+angle_val = []
+for i6 in range(len(values)-1):
+    val1 = values[i6]
+    val2 = values[i6+1]
+    val3 = abs(val2-val1)
+    X1,Y1 = central_coordi[i6]
+    X2,Y2 = central_coordi[i6+1]
+    val4 = abs(X2-X1)
+    M = (val3+0.00005)/(val4+0.00005)
+    MM.append(M)
+    angle_val.append(val3)
+#     print('Measure',M)
+#     print('Coordinate',central_coordi[i6])
 
-for i2 in range(len(first_ele)-1):
-    x0,y0 = first_ele[i2]
-    x1,y1 = first_ele[i2+1]
-    lineThickness = 2
-    cv2.line(img111, (x0, y0), (x1,y1), (0,0,255), lineThickness)
-    distance = ((x1-x0)**2 + (y1-y0)**2)**0.5
-    if distance <= 120:
-        lineThickness = 2
-        cv2.line(img222, (x0, y0), (x1,y1), (0,0,255), lineThickness)
-   
-   ## Mask ##
-mask1 = cv2.bitwise_or(img, img, mask=filled)
+medi1 = np.mean(MM)
+# print('Mean',medi1)
+coordd = []
+modfies_coord = []
+for i9 in range(len(MM)):
+    if MM[i9]>medi1*4.5:
+            X1,Y1 = central_coordi[i9]
+            coordd = (X1,Y1)
+            modfies_coord.append(coordd)
+#             cv2.circle(img1,(X1,Y1),2,255,-1)
+coordd2 = []
+modfied_coord2 = []
+for i10 in range(len(modfies_coord)-1):
+    x10,y10 = modfies_coord[i10]
+    x100,y100 = modfies_coord[i10+1]
 
-first_ele = np.array(first_ele)
+    distance = ((x100-x10)**2 + (y100-y10)**2)**0.5
+    if distance > 6:
+#         print('Distance',distance)
+#         cv2.circle(img1,(x10,y10 ),2,255,-1)
+        coordd2 = (x10,y10)
+        modfied_coord2.append(coordd2)
+coordd3 = []
+modfied_coord3 = []
+for i20 in range(len(modfied_coord2)-2):
+    x20,y20 = modfied_coord2[i20]
+    x21,y21 = modfied_coord2[i20+1]
+    x22,y22 = modfied_coord2[i20+2]
+    angle21 = np.arctan((y22 - y21)/(x22 - x21 +0.00005)) - np.arctan((y21-y20)/(x21-x20 +0.00005))
+    angle21 = np.degrees(angle21)
+    if angle21 < 0:
+        angle21 = angle21 + 180.0
+    if angle21>70:
+        cv2.circle(img2,(x21,y21),2,255,-1)
+#         print('Angle_final',angle21)
+        coordd3 = (x21,y21)
+        modfied_coord3.append(coordd3)
+area_coord = []
+area_coord2 = []
+for i30 in range(len(modfied_coord3)-2):
+    x30,y30 = modfied_coord3[i30]
+    x31,y31 = modfied_coord3[i30+1]
+    x32,y32 = modfied_coord3[i30+2]
+    area = abs((x30*(y31-y32)+x31*(y32-y30)+x32*(y30-y31))/2)
+#     print('Area',area)
+    if area > 50:
+        cv2.circle(img_out2,(x31,y31),2,255,-1)
+        area_coord = (x31,y31)
+        area_coord2.append(area_coord)
+#         print('coord',(x31,y31))
 
-mask2 = mask1[:,:,1]
+area_coord3 = row_white + col_white + area_coord2
+area_coord3 =np.array(area_coord3)
 
-   ### PIXEL DENSITY THROUGH K MEANS ####
-pixels = np.float32(mask2.reshape(-1, 1))
-print(pixels.shape)
-n_colors = 5
-criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 200, .1)
-flags = cv2.KMEANS_RANDOM_CENTERS
+area_sorted_pts = sort(area_coord3)
 
-_, labels, palette = cv2.kmeans(pixels, n_colors, None, criteria, 10, flags)
-_, counts = np.unique(labels, return_counts=True)
+area_update_pts = area_sorted_pts
+def euclidean4(coords):
+    x04, y04 = area_update_pts[0]
+    x044, y044 = coords
+    return ((x044-x04)**2 + (y044-y04)**2)**0.5
+area_first_ele = []
+for i80 in range(len(area_update_pts)-1):
+    area_candidates = area_update_pts[1:]
+#     print('SORTED\n',candidates)
+    area_candidates.sort(key=euclidean4)
+    area_update_pts = area_candidates  
+    area_first_ele.append(area_candidates[0])
 
-palette = np.uint8(palette)
-res = palette[labels.flatten()]
-res2 = res.reshape((mask2.shape))
+area_first_ele = np.array(area_first_ele[1:])
+# print(area_first_ele)
+cv2.drawContours(img_out2, [area_first_ele],  -1, (0, 0, 255), 2, cv2.LINE_AA)
 
-green_pix = 0
-other_pix = 0
-for j14 in range(rows):
-    for j24 in range(cols):
-        pixel_val = res2[j14,j24]
-        if pixel_val>= 1 and pixel_val<= 200:
-            green_pix +=1
-        elif pixel_val>200:
-            other_pix +=1
-print('Green:',green_pix)
-print('Other:',other_pix)
-        
-# dominant = palette[np.argmax(counts)]
-print('Dominant',counts)
-total = green_pix+other_pix
-percentage = (green_pix*100)/total
-print(percentage)
+mask_defect = np.zeros((rows,cols), np.uint8)
+cv2.drawContours(mask_defect, [area_first_ele], 0, (255, 255, 255), -1, cv2.LINE_AA)
 
 
-# cv2.imwrite("./results/Green_channel.jpg", g)
-# cv2.imwrite("./results/Noise_removal:- erosion,otsu-thresh,Canny_edge_detection.jpg", edges)
-# cv2.imwrite("./results/contour_filling.jpg", filled)
-# cv2.imwrite("./results/Output:boarder.jpg", img222)
-# cv2.imshow("Green_channel", g)
-# cv2.imshow("Noise_removal:- erosion,otsu-thresh,Canny_edge_detection", edges)
-# cv2.imshow("results/contour_filling", filled)
-cv2.imshow("Output:boarder", filled)
-cv2.imshow("masked", mask1)
-cv2.imshow("masked_G-channel", mask2)
+cv2.imshow("Normal", mask_normal)
+cv2.imshow("Defected", mask_defect)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
